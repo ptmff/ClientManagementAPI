@@ -1,10 +1,9 @@
-namespace shkola_dela.Controllers;
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using shkola_dela.Models;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Models;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -17,62 +16,81 @@ public class FoundersController : ControllerBase
         _context = context;
     }
 
-    // GET: api/founders
+    // Получение всех учредителей
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Founder>>> GetFounders()
+    public async Task<ActionResult<IEnumerable<FounderDTO>>> GetFounders()
     {
-        return await _context.Founders.Include(f => f.Client).ToListAsync();
+        var founders = await _context.Founders
+            .Include(f => f.ClientFounders)
+            .Select(f => new FounderDTO
+            {
+                Id = f.Id,
+                Inn = f.Inn,
+                FullName = f.FullName,
+                DateAdded = f.DateAdded,
+                DateUpdated = f.DateUpdated,
+                ClientIds = f.ClientFounders.Select(cf => cf.ClientId).ToList()
+            })
+            .ToListAsync();
+
+        return founders;
     }
 
-    // GET: api/founders/5
+    // Получение учредителя по ID
     [HttpGet("{id}")]
-    public async Task<ActionResult<Founder>> GetFounder(int id)
+    public async Task<ActionResult<FounderDTO>> GetFounder(int id)
     {
-        var founder = await _context.Founders.Include(f => f.Client).FirstOrDefaultAsync(f => f.Id == id);
+        var founder = await _context.Founders
+            .Include(f => f.ClientFounders)
+            .Where(f => f.Id == id)
+            .Select(f => new FounderDTO
+            {
+                Id = f.Id,
+                Inn = f.Inn,
+                FullName = f.FullName,
+                DateAdded = f.DateAdded,
+                DateUpdated = f.DateUpdated,
+                ClientIds = f.ClientFounders.Select(cf => cf.ClientId).ToList()
+            })
+            .FirstOrDefaultAsync();
+
         if (founder == null)
         {
             return NotFound();
         }
+
         return founder;
     }
 
-    // POST: api/founders
+    // Создание учредителя
     [HttpPost]
-    public async Task<ActionResult<Founder>> PostFounder(Founder founder)
+    public async Task<ActionResult<FounderDTO>> PostFounder(FounderDTO founderDto)
     {
+        var founder = new Founder
+        {
+            Inn = founderDto.Inn,
+            FullName = founderDto.FullName
+        };
+
         _context.Founders.Add(founder);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetFounder), new { id = founder.Id }, founder);
-    }
 
-    // PUT: api/founders/5
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutFounder(int id, Founder founder)
-    {
-        if (id != founder.Id)
+        if (founderDto.ClientIds != null && founderDto.ClientIds.Any())
         {
-            return BadRequest();
+            var clientFounders = founderDto.ClientIds.Select(clientId => new ClientFounder
+            {
+                ClientId = clientId,
+                FounderId = founder.Id
+            }).ToList();
+
+            _context.ClientFounders.AddRange(clientFounders);
+            await _context.SaveChangesAsync();
         }
 
-        _context.Entry(founder).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        founderDto.Id = founder.Id;
+        founderDto.DateAdded = founder.DateAdded;
+        founderDto.DateUpdated = founder.DateUpdated;
 
-        return NoContent();
-    }
-
-    // DELETE: api/founders/5
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteFounder(int id)
-    {
-        var founder = await _context.Founders.FindAsync(id);
-        if (founder == null)
-        {
-            return NotFound();
-        }
-
-        _context.Founders.Remove(founder);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        return CreatedAtAction(nameof(GetFounder), new { id = founder.Id }, founderDto);
     }
 }

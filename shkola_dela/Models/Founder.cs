@@ -1,13 +1,14 @@
 namespace shkola_dela.Models;
 
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 public class Founder
 {
     public int Id { get; set; }
 
     [Required]
-    [StringLength(12, MinimumLength = 12)] // ИНН учредителя всегда 12 цифр
+    [StringLength(12, MinimumLength = 12)]
     public string Inn { get; set; }
 
     [Required]
@@ -18,7 +19,5 @@ public class Founder
 
     public DateTime DateUpdated { get; set; } = DateTime.UtcNow;
 
-    public int ClientId { get; set; }
-
-    public Client Client { get; set; }
+    public ICollection<ClientFounder> ClientFounders { get; set; } = new List<ClientFounder>();
 }

@@ -7,19 +7,13 @@ public class ApplicationDbContext : DbContext
     {
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is Client client)
+            if (entry.Entity is Client client && entry.State == EntityState.Modified)
             {
-                if (entry.State == EntityState.Modified)
-                {
-                    client.DateUpdated = DateTime.UtcNow;
-                }
+                client.DateUpdated = DateTime.UtcNow;
             }
-            if (entry.Entity is Founder founder)
+            if (entry.Entity is Founder founder && entry.State == EntityState.Modified)
             {
-                if (entry.State == EntityState.Modified)
-                {
-                    founder.DateUpdated = DateTime.UtcNow;
-                }
+                founder.DateUpdated = DateTime.UtcNow;
             }
         }
         return await base.SaveChangesAsync(cancellationToken);
@@ -29,14 +23,21 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Client> Clients { get; set; }
     public DbSet<Founder> Founders { get; set; }
+    public DbSet<ClientFounder> ClientFounders { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Client>()
-            .HasMany(c => c.Founders)
-            .WithOne(f => f.Client)
-            .HasForeignKey(f => f.ClientId);
+        modelBuilder.Entity<ClientFounder>()
+            .HasKey(cf => new { cf.ClientId, cf.FounderId });
+
+        modelBuilder.Entity<ClientFounder>()
+            .HasOne(cf => cf.Client)
+            .WithMany(c => c.ClientFounders)
+            .HasForeignKey(cf => cf.ClientId);
+
+        modelBuilder.Entity<ClientFounder>()
+            .HasOne(cf => cf.Founder)
+            .WithMany(f => f.ClientFounders)
+            .HasForeignKey(cf => cf.FounderId);
     }
 }
-
-

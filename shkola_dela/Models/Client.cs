@@ -1,15 +1,14 @@
-using shkola_dela.Models.Enums;
-
 namespace shkola_dela.Models;
 
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 public class Client
 {
     public int Id { get; set; }
 
     [Required]
-    [StringLength(12, MinimumLength = 10)] // ИНН может быть длиной 10 (ИП) или 12 (ЮЛ)
+    [StringLength(12, MinimumLength = 10)]
     public string Inn { get; set; }
 
     [Required]
@@ -17,11 +16,11 @@ public class Client
     public string Name { get; set; }
 
     [Required]
-    public ClientType Type { get; set; }
+    public string Type { get; set; }
 
     public DateTime DateAdded { get; set; } = DateTime.UtcNow;
 
     public DateTime DateUpdated { get; set; } = DateTime.UtcNow;
 
-    public ICollection<Founder>? Founders { get; set; } = new List<Founder>(); 
+    public ICollection<ClientFounder> ClientFounders { get; set; } = new List<ClientFounder>();
 }

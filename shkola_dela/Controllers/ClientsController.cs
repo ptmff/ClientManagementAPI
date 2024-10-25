@@ -1,10 +1,9 @@
-namespace shkola_dela.Controllers;
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using shkola_dela.Models;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Models;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -17,62 +16,85 @@ public class ClientsController : ControllerBase
         _context = context;
     }
 
-    // GET: api/clients
+    // Получение всех клиентов
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Client>>> GetClients()
+    public async Task<ActionResult<IEnumerable<ClientDTO>>> GetClients()
     {
-        return await _context.Clients.Include(c => c.Founders).ToListAsync();
+        var clients = await _context.Clients
+            .Include(c => c.ClientFounders)
+            .Select(c => new ClientDTO
+            {
+                Id = c.Id,
+                Inn = c.Inn,
+                Name = c.Name,
+                Type = c.Type,
+                DateAdded = c.DateAdded,
+                DateUpdated = c.DateUpdated,
+                FounderIds = c.ClientFounders.Select(cf => cf.FounderId).ToList()
+            })
+            .ToListAsync();
+
+        return clients;
     }
 
-    // GET: api/clients/5
+    // Получение клиента по ID
     [HttpGet("{id}")]
-    public async Task<ActionResult<Client>> GetClient(int id)
+    public async Task<ActionResult<ClientDTO>> GetClient(int id)
     {
-        var client = await _context.Clients.Include(c => c.Founders).FirstOrDefaultAsync(f => f.Id == id);
+        var client = await _context.Clients
+            .Include(c => c.ClientFounders)
+            .Where(c => c.Id == id)
+            .Select(c => new ClientDTO
+            {
+                Id = c.Id,
+                Inn = c.Inn,
+                Name = c.Name,
+                Type = c.Type,
+                DateAdded = c.DateAdded,
+                DateUpdated = c.DateUpdated,
+                FounderIds = c.ClientFounders.Select(cf => cf.FounderId).ToList()
+            })
+            .FirstOrDefaultAsync();
+
         if (client == null)
         {
             return NotFound();
         }
+
         return client;
     }
 
-    // POST: api/clients
+    // Создание клиента
     [HttpPost]
-    public async Task<ActionResult<Client>> PostClient(Client client)
+    public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
     {
+        var client = new Client
+        {
+            Inn = clientDto.Inn,
+            Name = clientDto.Name,
+            Type = clientDto.Type
+        };
+
         _context.Clients.Add(client);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetClient), new { id = client.Id }, client);
-    }
 
-    // PUT: api/clients/5
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutClient(int id, Client client)
-    {
-        if (id != client.Id)
+        if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
         {
-            return BadRequest();
+            var clientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
+            {
+                ClientId = client.Id,
+                FounderId = founderId
+            }).ToList();
+
+            _context.ClientFounders.AddRange(clientFounders);
+            await _context.SaveChangesAsync();
         }
 
-        _context.Entry(client).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        clientDto.Id = client.Id;
+        clientDto.DateAdded = client.DateAdded;
+        clientDto.DateUpdated = client.DateUpdated;
 
-        return NoContent();
-    }
-
-    // DELETE: api/clients/5
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteClient(int id)
-    {
-        var client = await _context.Clients.FindAsync(id);
-        if (client == null)
-        {
-            return NotFound();
-        }
-
-        _context.Clients.Remove(client);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
     }
 }
+
