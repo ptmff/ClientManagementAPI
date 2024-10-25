@@ -152,5 +152,28 @@ public class ClientsController : ControllerBase
         return NoContent();
     }
 
+    // Удаление клиента
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteClient(int id)
+    {
+        var client = await _context.Clients
+            .Include(c => c.ClientFounders)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (client == null)
+        {
+            return NotFound();
+        }
+
+        // Удаляем записи о связях клиента с учредителями
+        _context.ClientFounders.RemoveRange(client.ClientFounders);
+
+        // Удаляем клиента
+        _context.Clients.Remove(client);
+    
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
 

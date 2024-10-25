@@ -136,4 +136,27 @@ public class FoundersController : ControllerBase
         return NoContent();
     }
 
+    // Удаление учредителя
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteFounder(int id)
+    {
+        var founder = await _context.Founders
+            .Include(f => f.ClientFounders)
+            .FirstOrDefaultAsync(f => f.Id == id);
+
+        if (founder == null)
+        {
+            return NotFound();
+        }
+
+        // Удаляем записи о связях учредителя с клиентами
+        _context.ClientFounders.RemoveRange(founder.ClientFounders);
+
+        // Удаляем учредителя
+        _context.Founders.Remove(founder);
+    
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
