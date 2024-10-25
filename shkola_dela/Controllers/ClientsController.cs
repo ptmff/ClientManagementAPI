@@ -27,7 +27,7 @@ public class ClientsController : ControllerBase
                 Id = c.Id,
                 Inn = c.Inn,
                 Name = c.Name,
-                Type = c.Type,
+                Type = c.Type.ToString(),  // Преобразование ClientType в строку
                 DateAdded = c.DateAdded,
                 DateUpdated = c.DateUpdated,
                 FounderIds = c.ClientFounders.Select(cf => cf.FounderId).ToList()
@@ -37,7 +37,7 @@ public class ClientsController : ControllerBase
         return clients;
     }
 
-    // Получение клиента по ID
+// Получение клиента по ID
     [HttpGet("{id}")]
     public async Task<ActionResult<ClientDTO>> GetClient(int id)
     {
@@ -49,7 +49,7 @@ public class ClientsController : ControllerBase
                 Id = c.Id,
                 Inn = c.Inn,
                 Name = c.Name,
-                Type = c.Type,
+                Type = c.Type.ToString(),  // Преобразование ClientType в строку
                 DateAdded = c.DateAdded,
                 DateUpdated = c.DateUpdated,
                 FounderIds = c.ClientFounders.Select(cf => cf.FounderId).ToList()
@@ -64,15 +64,21 @@ public class ClientsController : ControllerBase
         return client;
     }
 
+
     // Создание клиента
     [HttpPost]
     public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
     {
+        if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
+        {
+            return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
+        }
+
         var client = new Client
         {
             Inn = clientDto.Inn,
             Name = clientDto.Name,
-            Type = clientDto.Type
+            Type = clientType
         };
 
         _context.Clients.Add(client);

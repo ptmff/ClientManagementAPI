@@ -3,6 +3,12 @@ namespace shkola_dela.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 
+public enum ClientType
+{
+    IndividualEnterpreneur,
+    LegalPerson
+}
+
 public class Client
 {
     public int Id { get; set; }
@@ -16,7 +22,7 @@ public class Client
     public string Name { get; set; }
 
     [Required]
-    public string Type { get; set; }
+    public ClientType Type { get; set; }
 
     public DateTime DateAdded { get; set; } = DateTime.UtcNow;
 
