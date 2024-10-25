@@ -74,6 +74,13 @@ public class ClientsController : ControllerBase
             return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
         }
 
+        // Проверка длины ИНН в зависимости от типа клиента
+        if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
+            (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
+        {
+            return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
+        }
+
         var client = new Client
         {
             Inn = clientDto.Inn,
@@ -102,6 +109,7 @@ public class ClientsController : ControllerBase
 
         return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
     }
+
     
     // Обновление информации о клиенте
     [HttpPut("{id}")]
@@ -121,15 +129,21 @@ public class ClientsController : ControllerBase
             return NotFound();
         }
 
-        // Обновляем поля клиента
-        client.Inn = clientDto.Inn;
-        client.Name = clientDto.Name;
-
         if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
         {
             return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
         }
 
+        // Проверка длины ИНН в зависимости от типа клиента
+        if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
+            (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
+        {
+            return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
+        }
+
+        // Обновляем поля клиента
+        client.Inn = clientDto.Inn;
+        client.Name = clientDto.Name;
         client.Type = clientType;
 
         // Обновление учредителей клиента (удаление старых и добавление новых)
@@ -151,6 +165,7 @@ public class ClientsController : ControllerBase
 
         return NoContent();
     }
+
 
     // Удаление клиента
     [HttpDelete("{id}")]
