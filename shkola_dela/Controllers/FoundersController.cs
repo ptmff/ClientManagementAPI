@@ -93,4 +93,47 @@ public class FoundersController : ControllerBase
 
         return CreatedAtAction(nameof(GetFounder), new { id = founder.Id }, founderDto);
     }
+    
+    // Обновление информации об учредителе
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutFounder(int id, FounderDTO founderDto)
+    {
+        if (id != founderDto.Id)
+        {
+            return BadRequest("Founder ID mismatch.");
+        }
+
+        var founder = await _context.Founders
+            .Include(f => f.ClientFounders)
+            .FirstOrDefaultAsync(f => f.Id == id);
+
+        if (founder == null)
+        {
+            return NotFound();
+        }
+
+        // Обновляем поля учредителя
+        founder.Inn = founderDto.Inn;
+        founder.FullName = founderDto.FullName;
+
+        // Обновление клиентов учредителя (удаление старых и добавление новых)
+        var existingClientFounders = founder.ClientFounders.ToList();
+        _context.ClientFounders.RemoveRange(existingClientFounders);
+
+        if (founderDto.ClientIds != null && founderDto.ClientIds.Any())
+        {
+            var newClientFounders = founderDto.ClientIds.Select(clientId => new ClientFounder
+            {
+                ClientId = clientId,
+                FounderId = founder.Id
+            }).ToList();
+
+            _context.ClientFounders.AddRange(newClientFounders);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
 }

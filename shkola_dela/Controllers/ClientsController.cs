@@ -102,5 +102,55 @@ public class ClientsController : ControllerBase
 
         return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
     }
+    
+    // Обновление информации о клиенте
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutClient(int id, ClientDTO clientDto)
+    {
+        if (id != clientDto.Id)
+        {
+            return BadRequest("Client ID mismatch.");
+        }
+
+        var client = await _context.Clients
+            .Include(c => c.ClientFounders)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (client == null)
+        {
+            return NotFound();
+        }
+
+        // Обновляем поля клиента
+        client.Inn = clientDto.Inn;
+        client.Name = clientDto.Name;
+
+        if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
+        {
+            return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
+        }
+
+        client.Type = clientType;
+
+        // Обновление учредителей клиента (удаление старых и добавление новых)
+        var existingClientFounders = client.ClientFounders.ToList();
+        _context.ClientFounders.RemoveRange(existingClientFounders);
+
+        if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
+        {
+            var newClientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
+            {
+                ClientId = client.Id,
+                FounderId = founderId
+            }).ToList();
+
+            _context.ClientFounders.AddRange(newClientFounders);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
 }
 
