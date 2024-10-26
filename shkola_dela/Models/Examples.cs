@@ -120,3 +120,119 @@ public class ClientGETID
         }
     }
 }
+
+
+
+
+
+
+public class FounderPOST
+{
+    public class ClientExample
+    {
+        public string Inn { get; set; }
+        public string FullName { get; set; }
+        public List<int> ClientIds { get; set; }
+    }
+
+    public class CreateClientResponse1
+    {
+        public int Id { get; set; }
+        public string Inn { get; set; }
+        public string FullName { get; set; }
+        public DateTime DateAdded { get; set; }
+        public DateTime DateUpdated { get; set; }
+        public List<int> ClientIds { get; set; }
+    }
+
+    public class CreateClientRequestExample : IExamplesProvider<ClientExample>
+    {
+        public ClientExample GetExamples()
+        {
+            return new ClientExample
+            {
+                Inn = "333333333333",
+                FullName = "Founder 1",
+                ClientIds = [1, 2]
+            };
+        }
+    }
+
+    public class CreateClientResponseExample : IExamplesProvider<CreateClientResponse1>
+    {
+        public CreateClientResponse1 GetExamples()
+        {
+            return new CreateClientResponse1
+            {
+                Id = 1,
+                Inn = "333333333333",
+                FullName = "Founder 1",
+                DateAdded = DateTime.UtcNow,
+                DateUpdated = DateTime.UtcNow,
+                ClientIds = [1, 2]
+            };
+        }
+    }
+}
+
+
+public class FounderGET
+{
+    public class ClientResponse
+    {
+        public int Id { get; set; }
+        public string Inn { get; set; }
+        public string FullName { get; set; }
+        public DateTime DateAdded { get; set; }
+        public DateTime DateUpdated { get; set; }
+        public List<int> ClientIds { get; set; }
+    }
+
+    public class ClientResponseListExample : IExamplesProvider<List<ClientResponse>>
+    {
+        public List<ClientResponse> GetExamples()
+        {
+            return new List<ClientResponse>
+            {
+                new ClientResponse
+                {
+                    Id = 1,
+                    Inn = "333333333333",
+                    FullName = "Founder 1",
+                    DateAdded = DateTime.UtcNow,
+                    DateUpdated = DateTime.UtcNow,
+                    ClientIds = new List<int> { 1, 2 }
+                }
+            };
+        }
+    }
+}
+
+public class FounderGETID
+{
+    public class ClientResponse
+    {
+        public int Id { get; set; }
+        public string Inn { get; set; }
+        public string FullName { get; set; }
+        public DateTime DateAdded { get; set; }
+        public DateTime DateUpdated { get; set; }
+        public List<int> ClientIds { get; set; }
+    }
+
+    public class ClientResponseExample : IExamplesProvider<ClientResponse>
+    {
+        public ClientResponse GetExamples()
+        {
+            return new ClientResponse
+            {
+                Id = 1,
+                Inn = "333333333333",
+                FullName = "Founder 1",
+                DateAdded = DateTime.UtcNow,
+                DateUpdated = DateTime.UtcNow,
+                ClientIds = [1, 2]
+            };
+        }
+    }
+}

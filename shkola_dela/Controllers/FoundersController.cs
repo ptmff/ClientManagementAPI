@@ -4,6 +4,7 @@ using shkola_dela.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Swashbuckle.AspNetCore.Filters;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -18,6 +19,7 @@ public class FoundersController : ControllerBase
 
     // Получение всех учредителей
     [HttpGet]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(FounderGET.ClientResponseListExample))]
     public async Task<ActionResult<IEnumerable<FounderDTO>>> GetFounders()
     {
         var founders = await _context.Founders
@@ -38,6 +40,7 @@ public class FoundersController : ControllerBase
 
     // Получение учредителя по ID
     [HttpGet("{id}")]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(FounderGETID.ClientResponseExample))]
     public async Task<ActionResult<FounderDTO>> GetFounder(int id)
     {
         var founder = await _context.Founders
@@ -64,6 +67,9 @@ public class FoundersController : ControllerBase
 
 // Создание учредителя
 [HttpPost]
+[SwaggerRequestExample(typeof(FounderPOST.ClientExample), typeof(FounderPOST.CreateClientRequestExample))]
+[SwaggerResponseExample(StatusCodes.Status201Created, typeof(FounderPOST.CreateClientResponseExample))]
+[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(FounderPOST.CreateClientResponse1))]
 public async Task<ActionResult<FounderDTO>> PostFounder(FounderDTO founderDto)
 {
     using (var transaction = await _context.Database.BeginTransactionAsync())
@@ -128,6 +134,8 @@ public async Task<ActionResult<FounderDTO>> PostFounder(FounderDTO founderDto)
     
     // Обновление информации об учредителе
 [HttpPut("{id}")]
+[SwaggerRequestExample(typeof(FounderPOST.ClientExample), typeof(FounderGETID.ClientResponseExample))]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
 public async Task<IActionResult> PutFounder(int id, FounderDTO founderDto)
 {
     if (id != founderDto.Id)
@@ -208,6 +216,7 @@ public async Task<IActionResult> PutFounder(int id, FounderDTO founderDto)
 
     // Удаление учредителя
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteFounder(int id)
     {
         var founder = await _context.Founders
