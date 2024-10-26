@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Добавьте сервисы для контроллеров и Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.ExampleFilters(); // Включить использование фильтров примеров
+});
+
+builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>(); 
+
 
 var app = builder.Build();
 

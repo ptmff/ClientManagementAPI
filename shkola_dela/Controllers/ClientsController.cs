@@ -4,6 +4,7 @@ using shkola_dela.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Swashbuckle.AspNetCore.Filters;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -18,6 +19,7 @@ public class ClientsController : ControllerBase
 
     // Получение всех клиентов
     [HttpGet]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ClientGET.ClientResponseListExample))]
     public async Task<ActionResult<IEnumerable<ClientDTO>>> GetClients()
     {
         var clients = await _context.Clients
@@ -39,6 +41,7 @@ public class ClientsController : ControllerBase
 
 // Получение клиента по ID
     [HttpGet("{id}")]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ClientGETID.ClientResponseExample))]
     public async Task<ActionResult<ClientDTO>> GetClient(int id)
     {
         var client = await _context.Clients
@@ -67,6 +70,9 @@ public class ClientsController : ControllerBase
 
     // Создание клиента
 [HttpPost]
+[SwaggerRequestExample(typeof(ClientPOST.ClientExample), typeof(ClientPOST.CreateClientRequestExample))]
+[SwaggerResponseExample(StatusCodes.Status201Created, typeof(ClientPOST.CreateClientResponseExample))]
+[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ClientPOST.CreateClientResponse))]
 public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
 {
     if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
@@ -145,6 +151,8 @@ public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
     
     // Обновление клиента
 [HttpPut("{id}")]
+[SwaggerRequestExample(typeof(ClientPOST.ClientExample), typeof(ClientGETID.ClientResponseExample))]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
 public async Task<IActionResult> PutClient(int id, ClientDTO clientDto)
 {
     if (id != clientDto.Id)
@@ -230,6 +238,7 @@ public async Task<IActionResult> PutClient(int id, ClientDTO clientDto)
 
     // Удаление клиента
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteClient(int id)
     {
         var client = await _context.Clients

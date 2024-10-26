@@ -108,3 +108,6 @@ C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\tr\Microso
 C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.resources.dll
 C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.resources.dll
 C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\obj\Debug\net8.0\shkola_dela.sourcelink.json
+C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\Scrutor.dll
+C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\Swashbuckle.AspNetCore.Filters.dll
+C:\Users\ptmff\RiderProjects\shkola_dela\shkola_dela\bin\Debug\net8.0\Swashbuckle.AspNetCore.Filters.Abstractions.dll
