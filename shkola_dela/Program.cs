@@ -20,6 +20,13 @@ builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();
 
 var app = builder.Build();
 
+// Применение миграций при запуске
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate(); // Применение всех существующих миграций
+}
+
 // Настройка HTTP конвейера
 if (app.Environment.IsDevelopment())
 {
