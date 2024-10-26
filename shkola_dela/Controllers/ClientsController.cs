@@ -103,13 +103,24 @@ public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
 
             if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
             {
-                var clientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
+                foreach (var founderId in clientDto.FounderIds)
                 {
-                    ClientId = client.Id,
-                    FounderId = founderId
-                }).ToList();
+                    var founder = await _context.Founders.FindAsync(founderId);
+                    if (founder == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return NotFound($"Founder with ID {founderId} not found.");
+                    }
 
-                _context.ClientFounders.AddRange(clientFounders);
+                    var clientFounder = new ClientFounder
+                    {
+                        ClientId = client.Id,
+                        FounderId = founderId
+                    };
+
+                    _context.ClientFounders.Add(clientFounder);
+                }
+
                 await _context.SaveChangesAsync();
             }
 
@@ -130,67 +141,90 @@ public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
 }
 
 
+
     
-    // Обновление информации о клиенте
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutClient(int id, ClientDTO clientDto)
+    // Обновление клиента
+[HttpPut("{id}")]
+public async Task<IActionResult> PutClient(int id, ClientDTO clientDto)
+{
+    if (id != clientDto.Id)
     {
-        if (id != clientDto.Id)
-        {
-            return BadRequest("Client ID mismatch.");
-        }
-
-        var client = await _context.Clients
-            .Include(c => c.ClientFounders)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (client == null)
-        {
-            return NotFound();
-        }
-
-        if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
-        {
-            return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
-        }
-
-        // Проверка длины ИНН в зависимости от типа клиента
-        if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
-            (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
-        {
-            return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
-        }
-
-        // Проверка количества учредителей для IndividualEnterpreneur
-        if (clientType == ClientType.IndividualEnterpreneur && clientDto.FounderIds.Count > 1)
-        {
-            return BadRequest("IndividualEnterpreneur can have at most one founder.");
-        }
-
-        // Обновляем поля клиента
-        client.Inn = clientDto.Inn;
-        client.Name = clientDto.Name;
-        client.Type = clientType;
-
-        // Обновление учредителей клиента (удаление старых и добавление новых)
-        var existingClientFounders = client.ClientFounders.ToList();
-        _context.ClientFounders.RemoveRange(existingClientFounders);
-
-        if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
-        {
-            var newClientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
-            {
-                ClientId = client.Id,
-                FounderId = founderId
-            }).ToList();
-
-            _context.ClientFounders.AddRange(newClientFounders);
-        }
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        return BadRequest("Client ID mismatch.");
     }
+
+    if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
+    {
+        return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
+    }
+
+    // Проверка длины ИНН в зависимости от типа клиента
+    if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
+        (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
+    {
+        return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
+    }
+
+    // Проверка количества учредителей для IndividualEnterpreneur
+    if (clientType == ClientType.IndividualEnterpreneur && clientDto.FounderIds.Count > 1)
+    {
+        return BadRequest("IndividualEnterpreneur can have at most one founder.");
+    }
+
+    var client = await _context.Clients.Include(c => c.ClientFounders).FirstOrDefaultAsync(c => c.Id == id);
+    if (client == null)
+    {
+        return NotFound($"Client with ID {id} not found.");
+    }
+
+    using (var transaction = await _context.Database.BeginTransactionAsync())
+    {
+        try
+        {
+            client.Inn = clientDto.Inn;
+            client.Name = clientDto.Name;
+            client.Type = clientType;
+
+            _context.Entry(client).State = EntityState.Modified;
+
+            // Удаление текущих связей с учредителями
+            var existingFounders = client.ClientFounders.ToList();
+            _context.ClientFounders.RemoveRange(existingFounders);
+
+            // Добавление новых учредителей
+            if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
+            {
+                foreach (var founderId in clientDto.FounderIds)
+                {
+                    var founder = await _context.Founders.FindAsync(founderId);
+                    if (founder == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return NotFound($"Founder with ID {founderId} not found.");
+                    }
+
+                    var clientFounder = new ClientFounder
+                    {
+                        ClientId = client.Id,
+                        FounderId = founderId
+                    };
+
+                    _context.ClientFounders.Add(clientFounder);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, "An error occurred while updating the client.");
+        }
+    }
+}
+
 
 
 
