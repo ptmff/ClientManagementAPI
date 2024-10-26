@@ -66,49 +66,69 @@ public class ClientsController : ControllerBase
 
 
     // Создание клиента
-    [HttpPost]
-    public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
+[HttpPost]
+public async Task<ActionResult<ClientDTO>> PostClient(ClientDTO clientDto)
+{
+    if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
     {
-        if (!Enum.TryParse(clientDto.Type, out ClientType clientType))
-        {
-            return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
-        }
-
-        // Проверка длины ИНН в зависимости от типа клиента
-        if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
-            (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
-        {
-            return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
-        }
-
-        var client = new Client
-        {
-            Inn = clientDto.Inn,
-            Name = clientDto.Name,
-            Type = clientType
-        };
-
-        _context.Clients.Add(client);
-        await _context.SaveChangesAsync();
-
-        if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
-        {
-            var clientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
-            {
-                ClientId = client.Id,
-                FounderId = founderId
-            }).ToList();
-
-            _context.ClientFounders.AddRange(clientFounders);
-            await _context.SaveChangesAsync();
-        }
-
-        clientDto.Id = client.Id;
-        clientDto.DateAdded = client.DateAdded;
-        clientDto.DateUpdated = client.DateUpdated;
-
-        return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
+        return BadRequest("Invalid client type. Valid values are 'IndividualEnterpreneur' or 'LegalPerson'.");
     }
+
+    // Проверка длины ИНН в зависимости от типа клиента
+    if ((clientType == ClientType.IndividualEnterpreneur && clientDto.Inn.Length != 12) ||
+        (clientType == ClientType.LegalPerson && clientDto.Inn.Length != 10))
+    {
+        return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
+    }
+
+    // Проверка количества учредителей для IndividualEnterpreneur
+    if (clientType == ClientType.IndividualEnterpreneur && clientDto.FounderIds.Count > 1)
+    {
+        return BadRequest("IndividualEnterpreneur can have at most one founder.");
+    }
+
+    using (var transaction = await _context.Database.BeginTransactionAsync())
+    {
+        try
+        {
+            var client = new Client
+            {
+                Inn = clientDto.Inn,
+                Name = clientDto.Name,
+                Type = clientType
+            };
+
+            _context.Clients.Add(client);
+            await _context.SaveChangesAsync();
+
+            if (clientDto.FounderIds != null && clientDto.FounderIds.Any())
+            {
+                var clientFounders = clientDto.FounderIds.Select(founderId => new ClientFounder
+                {
+                    ClientId = client.Id,
+                    FounderId = founderId
+                }).ToList();
+
+                _context.ClientFounders.AddRange(clientFounders);
+                await _context.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+
+            clientDto.Id = client.Id;
+            clientDto.DateAdded = client.DateAdded;
+            clientDto.DateUpdated = client.DateUpdated;
+
+            return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, "An error occurred while creating the client.");
+        }
+    }
+}
+
 
     
     // Обновление информации о клиенте
@@ -141,6 +161,12 @@ public class ClientsController : ControllerBase
             return BadRequest($"Invalid Inn length. For {clientType}, the length should be {(clientType == ClientType.IndividualEnterpreneur ? 12 : 10)}.");
         }
 
+        // Проверка количества учредителей для IndividualEnterpreneur
+        if (clientType == ClientType.IndividualEnterpreneur && clientDto.FounderIds.Count > 1)
+        {
+            return BadRequest("IndividualEnterpreneur can have at most one founder.");
+        }
+
         // Обновляем поля клиента
         client.Inn = clientDto.Inn;
         client.Name = clientDto.Name;
@@ -165,6 +191,7 @@ public class ClientsController : ControllerBase
 
         return NoContent();
     }
+
 
 
     // Удаление клиента

@@ -63,36 +63,68 @@ public class FoundersController : ControllerBase
     }
 
     // Создание учредителя
-    [HttpPost]
-    public async Task<ActionResult<FounderDTO>> PostFounder(FounderDTO founderDto)
+[HttpPost]
+public async Task<ActionResult<FounderDTO>> PostFounder(FounderDTO founderDto)
+{
+    using (var transaction = await _context.Database.BeginTransactionAsync())
     {
-        var founder = new Founder
+        try
         {
-            Inn = founderDto.Inn,
-            FullName = founderDto.FullName
-        };
-
-        _context.Founders.Add(founder);
-        await _context.SaveChangesAsync();
-
-        if (founderDto.ClientIds != null && founderDto.ClientIds.Any())
-        {
-            var clientFounders = founderDto.ClientIds.Select(clientId => new ClientFounder
+            var founder = new Founder
             {
-                ClientId = clientId,
-                FounderId = founder.Id
-            }).ToList();
+                Inn = founderDto.Inn,
+                FullName = founderDto.FullName
+            };
 
-            _context.ClientFounders.AddRange(clientFounders);
+            _context.Founders.Add(founder);
             await _context.SaveChangesAsync();
+
+            if (founderDto.ClientIds != null && founderDto.ClientIds.Any())
+            {
+                foreach (var clientId in founderDto.ClientIds)
+                {
+                    var client = await _context.Clients.Include(c => c.ClientFounders).FirstOrDefaultAsync(c => c.Id == clientId);
+
+                    if (client == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest($"Client with ID {clientId} not found.");
+                    }
+
+                    if (client.Type == ClientType.IndividualEnterpreneur && client.ClientFounders.Count >= 1)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest("IndividualEnterpreneur can have at most one founder.");
+                    }
+
+                    var clientFounder = new ClientFounder
+                    {
+                        ClientId = clientId,
+                        FounderId = founder.Id
+                    };
+
+                    _context.ClientFounders.Add(clientFounder);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            founderDto.Id = founder.Id;
+            founderDto.DateAdded = founder.DateAdded;
+            founderDto.DateUpdated = founder.DateUpdated;
+
+            return CreatedAtAction(nameof(GetFounder), new { id = founder.Id }, founderDto);
         }
-
-        founderDto.Id = founder.Id;
-        founderDto.DateAdded = founder.DateAdded;
-        founderDto.DateUpdated = founder.DateUpdated;
-
-        return CreatedAtAction(nameof(GetFounder), new { id = founder.Id }, founderDto);
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, "An error occurred while creating the founder.");
+        }
     }
+}
+
+
     
     // Обновление информации об учредителе
     [HttpPut("{id}")]
@@ -112,29 +144,48 @@ public class FoundersController : ControllerBase
             return NotFound();
         }
 
-        // Обновляем поля учредителя
+        // Проверка на количество учредителей у IndividualEnterpreneur
+        foreach (var clientId in founderDto.ClientIds)
+        {
+            var client = await _context.Clients.Include(c => c.ClientFounders).FirstOrDefaultAsync(c => c.Id == clientId);
+
+            if (client == null)
+            {
+                return BadRequest($"Client with ID {clientId} not found.");
+            }
+
+            if (client.Type == ClientType.IndividualEnterpreneur && client.ClientFounders.Count >= 1)
+            {
+                return BadRequest("IndividualEnterpreneur can have at most one founder.");
+            }
+        }
+
+        // Обновляем данные учредителя
         founder.Inn = founderDto.Inn;
         founder.FullName = founderDto.FullName;
 
-        // Обновление клиентов учредителя (удаление старых и добавление новых)
+        // Удаление старых и добавление новых связей с клиентами
         var existingClientFounders = founder.ClientFounders.ToList();
         _context.ClientFounders.RemoveRange(existingClientFounders);
 
         if (founderDto.ClientIds != null && founderDto.ClientIds.Any())
         {
-            var newClientFounders = founderDto.ClientIds.Select(clientId => new ClientFounder
+            foreach (var clientId in founderDto.ClientIds)
             {
-                ClientId = clientId,
-                FounderId = founder.Id
-            }).ToList();
-
-            _context.ClientFounders.AddRange(newClientFounders);
+                var clientFounder = new ClientFounder
+                {
+                    ClientId = clientId,
+                    FounderId = founder.Id
+                };
+                _context.ClientFounders.Add(clientFounder);
+            }
         }
 
         await _context.SaveChangesAsync();
 
         return NoContent();
     }
+
 
     // Удаление учредителя
     [HttpDelete("{id}")]
